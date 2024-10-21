@@ -1,0 +1,9 @@
+E:\ONE DRIVE PLANNERA\OneDrive - Plannera Tecnologia da Informacao LTDA\Backup\backup_codes\nft_manager\target\debug\deps\validator_derive-f41e4a8eef9b6f86.dll: C:\Users\cfp5w\.cargo\registry\src\index.crates.io-6f17d22bba15001f\validator_derive-0.16.0\src\lib.rs C:\Users\cfp5w\.cargo\registry\src\index.crates.io-6f17d22bba15001f\validator_derive-0.16.0\src\asserts.rs C:\Users\cfp5w\.cargo\registry\src\index.crates.io-6f17d22bba15001f\validator_derive-0.16.0\src\lit.rs C:\Users\cfp5w\.cargo\registry\src\index.crates.io-6f17d22bba15001f\validator_derive-0.16.0\src\quoting.rs C:\Users\cfp5w\.cargo\registry\src\index.crates.io-6f17d22bba15001f\validator_derive-0.16.0\src\validation.rs
+
+E:\ONE DRIVE PLANNERA\OneDrive - Plannera Tecnologia da Informacao LTDA\Backup\backup_codes\nft_manager\target\debug\deps\validator_derive-f41e4a8eef9b6f86.d: C:\Users\cfp5w\.cargo\registry\src\index.crates.io-6f17d22bba15001f\validator_derive-0.16.0\src\lib.rs C:\Users\cfp5w\.cargo\registry\src\index.crates.io-6f17d22bba15001f\validator_derive-0.16.0\src\asserts.rs C:\Users\cfp5w\.cargo\registry\src\index.crates.io-6f17d22bba15001f\validator_derive-0.16.0\src\lit.rs C:\Users\cfp5w\.cargo\registry\src\index.crates.io-6f17d22bba15001f\validator_derive-0.16.0\src\quoting.rs C:\Users\cfp5w\.cargo\registry\src\index.crates.io-6f17d22bba15001f\validator_derive-0.16.0\src\validation.rs
+
+C:\Users\cfp5w\.cargo\registry\src\index.crates.io-6f17d22bba15001f\validator_derive-0.16.0\src\lib.rs:
+C:\Users\cfp5w\.cargo\registry\src\index.crates.io-6f17d22bba15001f\validator_derive-0.16.0\src\asserts.rs:
+C:\Users\cfp5w\.cargo\registry\src\index.crates.io-6f17d22bba15001f\validator_derive-0.16.0\src\lit.rs:
+C:\Users\cfp5w\.cargo\registry\src\index.crates.io-6f17d22bba15001f\validator_derive-0.16.0\src\quoting.rs:
+C:\Users\cfp5w\.cargo\registry\src\index.crates.io-6f17d22bba15001f\validator_derive-0.16.0\src\validation.rs:
