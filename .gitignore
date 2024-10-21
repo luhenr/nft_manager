@@ -1,0 +1,13 @@
+/target/
+
+*~
+*.swp
+*.swo
+
+.DS_Store
+
+.vscode/
+
+**/*.log
+
+Cargo.lock
