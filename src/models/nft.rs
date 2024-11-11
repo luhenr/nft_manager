@@ -1,34 +1,28 @@
-use serde::{Serialize, Deserialize};
-use validator::Validate;
+// src/models/nft.rs
+
 use chrono::NaiveDate;
+use serde::{Deserialize, Serialize};
+use validator::Validate;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum NFTCategory {
-    Art,
-    Collectible,
-    GameItem,
-    Other,
-}
-
-#[derive(Debug, Serialize, Deserialize, Validate, Clone)]
+#[derive(Debug, Serialize, Deserialize, Validate, Clone, PartialEq)]
 pub struct NFT {
     #[validate(length(min = 1))]
     pub token_id: String,
 
-    #[validate(length(min = 1))]
-    pub owner_id: String,
+    pub owner_id: u64,
 
     pub creation_date: NaiveDate,
 
-    pub category: NFTCategory,
+    #[validate(length(min = 1))]
+    pub category: String,
 }
 
 impl NFT {
     pub fn new(
         token_id: String,
-        owner_id: String,
+        owner_id: u64,
         creation_date: NaiveDate,
-        category: NFTCategory,
+        category: String,
     ) -> Self {
         NFT {
             token_id,
@@ -39,6 +33,6 @@ impl NFT {
     }
 
     pub fn validate_nft(&self) -> Result<(), validator::ValidationErrors> {
-        <NFT as Validate>::validate(self)
+        self.validate()
     }
 }

@@ -1,147 +1,160 @@
-use crate::models::nft::{NFT, NFTCategory};
-use crate::storage::file_storage::FileStorage;
-use std::io::{self, Write};
+// src/cli/commands.rs
 
-pub fn create_nft() {
-    println!("\nCriando um novo NFT...");
+use crate::models::nft::NFT;
+use crate::storage::file_storage::{FileStorage, StorageError};
+use chrono::NaiveDate;
+use std::io::{self, BufRead, Write};
 
-    let token_id = uuid::Uuid::new_v4().to_string();
-
-    let owner_id = loop {
-        print!("Digite o Owner ID (não vazio): ");
-        io::stdout().flush().unwrap();
-        let mut owner_id_input = String::new();
-        io::stdin().read_line(&mut owner_id_input).unwrap();
-        let owner_id = owner_id_input.trim();
-        if !owner_id.is_empty() {
-            break owner_id.to_string();
-        } else {
-            println!("Owner ID não pode ser vazio.");
-        }
-    };
-
-    let creation_date = chrono::Local::now().date_naive();
-
-    let category = loop {
-        println!("Selecione a categoria do NFT:");
-        println!("1. Arte");
-        println!("2. Colecionável");
-        println!("3. Item de Jogo");
-        println!("4. Outro");
-        print!("Opção: ");
-        io::stdout().flush().unwrap();
-        let mut category_choice = String::new();
-        io::stdin().read_line(&mut category_choice).unwrap();
-
-        match category_choice.trim() {
-            "1" => break NFTCategory::Art,
-            "2" => break NFTCategory::Collectible,
-            "3" => break NFTCategory::GameItem,
-            "4" => break NFTCategory::Other,
-            _ => println!("Categoria inválida. Tente novamente."),
-        }
-    };
-
+pub fn collect_nft_data(
+    token_id: String,
+    owner_id: u64,
+    creation_date: NaiveDate,
+    category: String,
+) -> Result<NFT, String> {
     let nft = NFT::new(token_id, owner_id, creation_date, category);
 
     // Validação dos dados
     if let Err(e) = nft.validate_nft() {
-        println!("Erro de validação: {:?}", e);
-        return;
+        return Err(format!("Erro de validação: {:?}", e));
     }
 
-    let mut storage = FileStorage::new("nfts.db");
-    match storage.save(&nft) {
-        Ok(_) => println!("NFT salvo com sucesso!"),
-        Err(e) => println!("Erro ao salvar NFT: {}", e),
+    Ok(nft)
+}
+
+pub fn process_create_nft(nft: &NFT, storage: &mut FileStorage) -> Result<(), StorageError> {
+    storage.save(nft)
+}
+
+pub fn create_nft(reader: &mut impl BufRead, db_path: &str) {
+    println!("\nCriando um novo NFT...");
+
+    // Coleta de dados do usuário
+    let token_id = get_input("Digite o Token ID (não vazio): ", reader);
+    let owner_id = loop {
+        let input = get_input("Digite o Owner ID (número inteiro): ", reader);
+        match input.parse::<u64>() {
+            Ok(id) => break id,
+            Err(_) => println!("Owner ID inválido. Por favor, insira um número inteiro."),
+        }
+    };
+    let creation_date = loop {
+        let input = get_input("Digite a Data de Criação (AAAA-MM-DD): ", reader);
+        match NaiveDate::parse_from_str(&input, "%Y-%m-%d") {
+            Ok(date) => break date,
+            Err(_) => println!("Data inválida. Formato esperado: AAAA-MM-DD."),
+        }
+    };
+    let category = get_input("Digite a Categoria do NFT (não vazia): ", reader);
+
+    match collect_nft_data(token_id, owner_id, creation_date, category) {
+        Ok(nft) => {
+            let mut storage = FileStorage::new(db_path);
+            if let Err(e) = process_create_nft(&nft, &mut storage) {
+                println!("Erro ao salvar NFT: {}", e);
+            } else {
+                println!("NFT salvo com sucesso!");
+            }
+        }
+        Err(e) => {
+            println!("Erro ao coletar dados do NFT: {}", e);
+        }
     }
 }
 
-pub fn read_nft() {
-    println!("\nLendo NFTs...");
+pub fn read_nft(db_path: &str) {
+    println!("\nListando NFTs...");
 
-    let mut storage = FileStorage::new("nfts.db");
+    let mut storage = FileStorage::new(db_path);
     match storage.load_all() {
         Ok(nfts) => {
             if nfts.is_empty() {
                 println!("Nenhum NFT encontrado.");
             } else {
                 for nft in nfts {
-                    println!("{:?}", nft);
+                    println!("------------------------------");
+                    println!("Token ID: {}", nft.token_id);
+                    println!("Owner ID: {}", nft.owner_id);
+                    println!("Data de Criação: {}", nft.creation_date);
+                    println!("Categoria: {}", nft.category);
                 }
+                println!("------------------------------");
             }
         }
         Err(e) => println!("Erro ao carregar NFTs: {}", e),
     }
 }
 
-pub fn update_nft() {
+pub fn process_update_nft(
+    token_id: &str,
+    new_owner_id: u64,
+    storage: &mut FileStorage,
+) -> Result<(), String> {
+    let mut nfts = storage.load_all().map_err(|e| e.to_string())?;
+
+    let position = nfts.iter().position(|nft| nft.token_id == token_id);
+    if let Some(pos) = position {
+        nfts[pos].owner_id = new_owner_id;
+
+        // Validação dos dados
+        if let Err(e) = nfts[pos].validate_nft() {
+            return Err(format!("Erro de validação: {:?}", e));
+        }
+
+        storage.save_all(&nfts).map_err(|e| e.to_string())?;
+        Ok(())
+    } else {
+        Err(format!("NFT com Token ID '{}' não encontrado.", token_id))
+    }
+}
+
+pub fn update_nft(reader: &mut impl BufRead, db_path: &str) {
     println!("\nAtualizando um NFT...");
 
-    print!("Digite o Token ID do NFT que deseja atualizar: ");
-    io::stdout().flush().unwrap();
-    let mut token_id = String::new();
-    io::stdin().read_line(&mut token_id).unwrap();
-    let token_id = token_id.trim().to_string();
-
-    let mut storage = FileStorage::new("nfts.db");
-    match storage.load_all() {
-        Ok(mut nfts) => {
-            if let Some(pos) = nfts.iter().position(|nft| nft.token_id == token_id) {
-                // Coleta e validação do novo owner_id
-                let new_owner_id = loop {
-                    print!("Digite o novo Owner ID (não vazio): ");
-                    io::stdout().flush().unwrap();
-                    let mut owner_id_input = String::new();
-                    io::stdin().read_line(&mut owner_id_input).unwrap();
-                    let owner_id = owner_id_input.trim();
-                    if !owner_id.is_empty() {
-                        break owner_id.to_string();
-                    } else {
-                        println!("Owner ID não pode ser vazio.");
-                    }
-                };
-
-                // Atualiza o owner_id
-                nfts[pos].owner_id = new_owner_id;
-
-                // Salva as alterações
-                match storage.save_all(&nfts) {
-                    Ok(_) => println!("NFT atualizado com sucesso!"),
-                    Err(e) => println!("Erro ao atualizar NFT: {}", e),
-                }
-            } else {
-                println!("NFT com Token ID '{}' não encontrado.", token_id);
-            }
+    let token_id = get_input("Digite o Token ID do NFT que deseja atualizar: ", reader);
+    let new_owner_id = loop {
+        let input = get_input("Digite o novo Owner ID (número inteiro): ", reader);
+        match input.parse::<u64>() {
+            Ok(id) => break id,
+            Err(_) => println!("Owner ID inválido. Por favor, insira um número inteiro."),
         }
-        Err(e) => println!("Erro ao carregar NFTs: {}", e),
+    };
+
+    let mut storage = FileStorage::new(db_path);
+    match process_update_nft(&token_id, new_owner_id, &mut storage) {
+        Ok(_) => println!("NFT atualizado com sucesso!"),
+        Err(e) => println!("Erro ao atualizar NFT: {}", e),
     }
 }
 
-pub fn delete_nft() {
+pub fn process_delete_nft(token_id: &str, storage: &mut FileStorage) -> Result<(), String> {
+    let mut nfts = storage.load_all().map_err(|e| e.to_string())?;
+    let original_len = nfts.len();
+    nfts.retain(|nft| nft.token_id != token_id);
+
+    if nfts.len() < original_len {
+        storage.save_all(&nfts).map_err(|e| e.to_string())?;
+        Ok(())
+    } else {
+        Err(format!("NFT com Token ID '{}' não encontrado.", token_id))
+    }
+}
+
+pub fn delete_nft(reader: &mut impl BufRead, db_path: &str) {
     println!("\nDeletando um NFT...");
 
-    print!("Digite o Token ID do NFT que deseja deletar: ");
-    io::stdout().flush().unwrap();
-    let mut token_id = String::new();
-    io::stdin().read_line(&mut token_id).unwrap();
-    let token_id = token_id.trim().to_string();
+    let token_id = get_input("Digite o Token ID do NFT que deseja deletar: ", reader);
 
-    let mut storage = FileStorage::new("nfts.db");
-    match storage.load_all() {
-        Ok(mut nfts) => {
-            let original_len = nfts.len();
-            nfts.retain(|nft| nft.token_id != token_id);
-
-            if nfts.len() < original_len {
-                match storage.save_all(&nfts) {
-                    Ok(_) => println!("NFT deletado com sucesso!"),
-                    Err(e) => println!("Erro ao deletar NFT: {}", e),
-                }
-            } else {
-                println!("NFT com Token ID '{}' não encontrado.", token_id);
-            }
-        }
-        Err(e) => println!("Erro ao carregar NFTs: {}", e),
+    let mut storage = FileStorage::new(db_path);
+    match process_delete_nft(&token_id, &mut storage) {
+        Ok(_) => println!("NFT deletado com sucesso!"),
+        Err(e) => println!("Erro ao deletar NFT: {}", e),
     }
+}
+
+fn get_input(prompt: &str, reader: &mut impl BufRead) -> String {
+    print!("{}", prompt);
+    io::stdout().flush().unwrap();
+    let mut input = String::new();
+    reader.read_line(&mut input).unwrap();
+    input.trim().to_string()
 }

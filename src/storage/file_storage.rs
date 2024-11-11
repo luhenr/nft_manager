@@ -1,10 +1,28 @@
+// src/storage/file_storage.rs
+
 use crate::models::nft::NFT;
-use bincode::{deserialize_from, serialize_into};
+use serde_json::{from_reader, to_writer};
 use std::fs::{File, OpenOptions};
-use std::io::{BufReader, BufWriter, Error, ErrorKind, Result};
+use std::io::{BufReader, BufWriter};
+use std::fmt;
+
+#[derive(Debug)]
+pub enum StorageError {
+    Io(std::io::Error),
+    Serde(serde_json::Error),
+}
+
+impl fmt::Display for StorageError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            StorageError::Io(e) => write!(f, "Erro de IO: {}", e),
+            StorageError::Serde(e) => write!(f, "Erro de Serde: {}", e),
+        }
+    }
+}
 
 pub struct FileStorage {
-    file_path: String,
+    pub file_path: String,
 }
 
 impl FileStorage {
@@ -14,70 +32,33 @@ impl FileStorage {
         }
     }
 
-    pub fn save(&mut self, nft: &NFT) -> Result<()> {
-        let file = OpenOptions::new()
-            .append(true)
-            .create(true)
-            .open(&self.file_path)?;
-        let mut writer = BufWriter::new(file);
-        serialize_into(&mut writer, &nft).map_err(|e| {
-            Error::new(
-                ErrorKind::Other,
-                format!("Erro ao serializar NFT: {}", e),
-            )
-        })?;
-        Ok(())
+    pub fn save(&mut self, nft: &NFT) -> Result<(), StorageError> {
+        let mut nfts = self.load_all().unwrap_or_else(|_| Vec::new());
+        nfts.push(nft.clone());
+        self.save_all(&nfts)
     }
 
-    pub fn save_all(&mut self, nfts: &[NFT]) -> Result<()> {
+    pub fn load_all(&mut self) -> Result<Vec<NFT>, StorageError> {
+        let file = OpenOptions::new()
+            .read(true)
+            .open(&self.file_path)
+            .map_err(StorageError::Io)?;
+
+        let reader = BufReader::new(file);
+        let nfts = from_reader(reader).map_err(StorageError::Serde)?;
+        Ok(nfts)
+    }
+
+    pub fn save_all(&mut self, nfts: &[NFT]) -> Result<(), StorageError> {
         let file = OpenOptions::new()
             .write(true)
+            .create(true)
             .truncate(true)
-            .open(&self.file_path)?;
-        let mut writer = BufWriter::new(file);
-        for nft in nfts {
-            serialize_into(&mut writer, &nft).map_err(|e| {
-                Error::new(
-                    ErrorKind::Other,
-                    format!("Erro ao serializar NFT: {}", e),
-                )
-            })?;
-        }
+            .open(&self.file_path)
+            .map_err(StorageError::Io)?;
+
+        let writer = BufWriter::new(file);
+        to_writer(writer, &nfts).map_err(StorageError::Serde)?;
         Ok(())
-    }
-
-    pub fn load_all(&mut self) -> Result<Vec<NFT>> {
-        let file = match File::open(&self.file_path) {
-            Ok(file) => file,
-            Err(e) => {
-                if e.kind() == ErrorKind::NotFound {
-                    return Ok(Vec::new());
-                } else {
-                    return Err(e);
-                }
-            }
-        };
-
-        let mut reader = BufReader::new(file);
-        let mut nfts = Vec::new();
-
-        loop {
-            match deserialize_from(&mut reader) {
-                Ok(nft) => nfts.push(nft),
-                Err(e) => {
-                    if let bincode::ErrorKind::Io(ref err) = *e {
-                        if err.kind() == ErrorKind::UnexpectedEof {
-                            break;
-                        }
-                    }
-                    return Err(Error::new(
-                        ErrorKind::Other,
-                        format!("Erro ao desserializar NFT: {}", e),
-                    ));
-                }
-            }
-        }
-
-        Ok(nfts)
     }
 }

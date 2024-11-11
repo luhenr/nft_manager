@@ -1,4 +1,9 @@
-use nft_manager::models::nft::{NFT, NFTCategory};
+// tests/nft_tests.rs
+
+use nft_manager::cli::commands::{
+    collect_nft_data, process_create_nft, process_delete_nft, process_update_nft,
+};
+use nft_manager::models::nft::NFT;
 use nft_manager::storage::file_storage::FileStorage;
 use chrono::NaiveDate;
 use tempfile::tempdir;
@@ -7,151 +12,123 @@ use tempfile::tempdir;
 fn test_nft_creation() {
     let nft = NFT::new(
         "token123".to_string(),
-        "owner456".to_string(),
-        NaiveDate::from_ymd_opt(2023, 10, 21).expect("Data inválida")
-,
-        NFTCategory::Art,
+        456u64,
+        NaiveDate::from_ymd_opt(2023, 10, 21).expect("Data inválida"),
+        "Arte".to_string(),
     );
 
     assert_eq!(nft.token_id, "token123");
-    assert_eq!(nft.owner_id, "owner456");
-    assert_eq!(nft.creation_date, NaiveDate::from_ymd_opt(2023, 10, 21).expect("Data inválida")
-);
-    match nft.category {
-        NFTCategory::Art => {}
-        _ => panic!("Categoria não é Art"),
-    }
+    assert_eq!(nft.owner_id, 456u64);
+    assert_eq!(
+        nft.creation_date,
+        NaiveDate::from_ymd_opt(2023, 10, 21).expect("Data inválida")
+    );
+    assert_eq!(nft.category, "Arte");
 }
 
 #[test]
 fn test_nft_validation() {
     let nft = NFT::new(
         "".to_string(), // token_id vazio
-        "".to_string(), // owner_id vazio
-        NaiveDate::from_ymd_opt(2023, 10, 21).expect("Data inválida")
-,
-        NFTCategory::Art,
+        0,              // owner_id inválido (se zero não for permitido)
+        NaiveDate::from_ymd_opt(2023, 10, 21).expect("Data inválida"),
+        "".to_string(), // categoria vazia
     );
 
     assert!(nft.validate_nft().is_err());
 }
 
 #[test]
-fn test_storage_save_and_load() {
+fn test_collect_nft_data_valid() {
+    let nft = collect_nft_data(
+        "token_test".to_string(),
+        123u64,
+        NaiveDate::from_ymd_opt(2023, 11, 5).expect("Data inválida"),
+        "Arte".to_string(),
+    );
+
+    assert!(nft.is_ok());
+}
+
+#[test]
+fn test_collect_nft_data_invalid() {
+    let nft = collect_nft_data(
+        "".to_string(),
+        0u64,
+        NaiveDate::from_ymd_opt(2023, 11, 5).expect("Data inválida"),
+        "".to_string(),
+    );
+
+    assert!(nft.is_err());
+}
+
+#[test]
+fn test_process_create_nft() {
+    let nft = NFT::new(
+        "token_process_test".to_string(),
+        789u64,
+        NaiveDate::from_ymd_opt(2023, 11, 5).expect("Data inválida"),
+        "Colecionável".to_string(),
+    );
+
     let dir = tempdir().unwrap();
     let file_path = dir.path().join("nfts_test.db");
     let file_path_str = file_path.to_str().unwrap();
 
     let mut storage = FileStorage::new(file_path_str);
 
-    let nft = NFT::new(
-        "token123".to_string(),
-        "owner456".to_string(),
-        NaiveDate::from_ymd_opt(2023, 10, 21).expect("Data inválida")
-,
-        NFTCategory::Art,
-    );
-
-    storage.save(&nft).unwrap();
-    let nfts = storage.load_all().unwrap();
-
-    assert_eq!(nfts.len(), 1);
-    assert_eq!(nfts[0].token_id, "token123");
-}
-
-#[test]
-fn test_storage_update() {
-    let dir = tempdir().unwrap();
-    let file_path = dir.path().join("nfts_test.db");
-    let file_path_str = file_path.to_str().unwrap();
-
-    let mut storage = FileStorage::new(file_path_str);
-
-    let mut nft = NFT::new(
-        "token123".to_string(),
-        "owner456".to_string(),
-        NaiveDate::from_ymd_opt(2023, 10, 21).expect("Data inválida")
-,
-        NFTCategory::Art,
-    );
-
-    storage.save(&nft).unwrap();
-
-    // Atualiza o owner_id
-    nft.owner_id = "new_owner".to_string();
-
-    // Salva todas as NFTs (neste caso, apenas uma)
-    storage.save_all(&[nft.clone()]).unwrap();
-
-    let nfts = storage.load_all().unwrap();
-    assert_eq!(nfts.len(), 1);
-    assert_eq!(nfts[0].owner_id, "new_owner");
-}
-
-#[test]
-fn test_storage_delete() {
-    let dir = tempdir().unwrap();
-    let file_path = dir.path().join("nfts_test.db");
-    let file_path_str = file_path.to_str().unwrap();
-
-    let mut storage = FileStorage::new(file_path_str);
-
-    let nft1 = NFT::new(
-        "token123".to_string(),
-        "owner456".to_string(),
-        NaiveDate::from_ymd_opt(2023, 10, 21).expect("Data inválida")
-,
-        NFTCategory::Art,
-    );
-
-    let nft2 = NFT::new(
-        "token789".to_string(),
-        "owner999".to_string(),
-        NaiveDate::from_ymd_opt(2023, 10, 21).expect("Data inválida"),
-        NFTCategory::Collectible,
-    );
-
-    storage.save(&nft1).unwrap();
-    storage.save(&nft2).unwrap();
-
-    let mut nfts = storage.load_all().unwrap();
-    assert_eq!(nfts.len(), 2);
-
-    // Deleta nft1
-    nfts.retain(|nft| nft.token_id != "token123");
-    storage.save_all(&nfts).unwrap();
-
-    let nfts = storage.load_all().unwrap();
-    assert_eq!(nfts.len(), 1);
-    assert_eq!(nfts[0].token_id, "token789");
-}
-
-#[test]
-fn test_create_nft_with_invalid_data() {
-    let nft = NFT::new(
-        "".to_string(), // token_id inválido
-        "".to_string(), // owner_id inválido
-        NaiveDate::from_ymd_opt(2023, 10, 21).expect("Data inválida")
-,
-        NFTCategory::Other,
-    );
-
-    let result = nft.validate_nft();
-    assert!(result.is_err());
-}
-
-#[test]
-fn test_create_nft_with_valid_data() {
-    let nft = NFT::new(
-        "valid_token_id".to_string(),
-        "valid_owner_id".to_string(),
-        NaiveDate::from_ymd_opt(2023, 10, 21).expect("Data inválida")
-,
-        NFTCategory::GameItem,
-    );
-
-    let result = nft.validate_nft();
+    let result = process_create_nft(&nft, &mut storage);
     assert!(result.is_ok());
+
+    let nfts = storage.load_all().unwrap();
+    assert_eq!(nfts.len(), 1);
+    assert_eq!(nfts[0], nft);
+}
+
+#[test]
+fn test_process_update_nft() {
+    let nft = NFT::new(
+        "token_update_test".to_string(),
+        123u64,
+        NaiveDate::from_ymd_opt(2023, 11, 5).expect("Data inválida"),
+        "Arte".to_string(),
+    );
+
+    let dir = tempdir().unwrap();
+    let file_path = dir.path().join("nfts_test.db");
+    let file_path_str = file_path.to_str().unwrap();
+
+    let mut storage = FileStorage::new(file_path_str);
+    storage.save(&nft).unwrap();
+
+    let result = process_update_nft("token_update_test", 456u64, &mut storage);
+    assert!(result.is_ok());
+
+    let nfts = storage.load_all().unwrap();
+    assert_eq!(nfts[0].owner_id, 456u64);
+}
+
+#[test]
+fn test_process_delete_nft() {
+    let nft = NFT::new(
+        "token_delete_test".to_string(),
+        123u64,
+        NaiveDate::from_ymd_opt(2023, 11, 5).expect("Data inválida"),
+        "Arte".to_string(),
+    );
+
+    let dir = tempdir().unwrap();
+    let file_path = dir.path().join("nfts_test.db");
+    let file_path_str = file_path.to_str().unwrap();
+
+    let mut storage = FileStorage::new(file_path_str);
+    storage.save(&nft).unwrap();
+
+    let result = process_delete_nft("token_delete_test", &mut storage);
+    assert!(result.is_ok());
+
+    let nfts = storage.load_all().unwrap();
+    assert!(nfts.is_empty());
 }
 
 #[test]
@@ -174,12 +151,8 @@ fn test_update_nonexistent_nft() {
 
     let mut storage = FileStorage::new(file_path_str);
 
-    // Tenta carregar NFTs (nenhuma salva)
-    let nfts = storage.load_all().unwrap();
-
-    // Tenta atualizar uma NFT que não existe
-    let pos = nfts.iter().position(|nft| nft.token_id == "nonexistent_token");
-    assert!(pos.is_none());
+    let result = process_update_nft("nonexistent_token", 456u64, &mut storage);
+    assert!(result.is_err());
 }
 
 #[test]
@@ -190,11 +163,6 @@ fn test_delete_nonexistent_nft() {
 
     let mut storage = FileStorage::new(file_path_str);
 
-    // Tenta carregar NFTs (nenhuma salva)
-    let mut nfts = storage.load_all().unwrap();
-
-    // Tenta deletar uma NFT que não existe
-    let original_len = nfts.len();
-    nfts.retain(|nft| nft.token_id != "nonexistent_token");
-    assert_eq!(nfts.len(), original_len);
+    let result = process_delete_nft("nonexistent_token", &mut storage);
+    assert!(result.is_err());
 }
