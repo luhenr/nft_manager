@@ -1,11 +1,11 @@
 // tests/nft_tests.rs
 
+use chrono::NaiveDate;
 use nft_manager::cli::commands::{
     collect_nft_data, process_create_nft, process_delete_nft, process_update_nft,
 };
 use nft_manager::models::nft::NFT;
 use nft_manager::storage::file_storage::FileStorage;
-use chrono::NaiveDate;
 use tempfile::tempdir;
 
 #[test]
@@ -30,7 +30,7 @@ fn test_nft_creation() {
 fn test_nft_validation() {
     let nft = NFT::new(
         "".to_string(), // token_id vazio
-        0,              // owner_id inválido (se zero não for permitido)
+        0,              // owner_id inválido (zero não é permitido)
         NaiveDate::from_ymd_opt(2023, 10, 21).expect("Data inválida"),
         "".to_string(), // categoria vazia
     );
@@ -53,10 +53,10 @@ fn test_collect_nft_data_valid() {
 #[test]
 fn test_collect_nft_data_invalid() {
     let nft = collect_nft_data(
-        "".to_string(),
-        0u64,
+        "".to_string(), // token_id vazio
+        0u64,           // owner_id inválido
         NaiveDate::from_ymd_opt(2023, 11, 5).expect("Data inválida"),
-        "".to_string(),
+        "".to_string(), // categoria vazia
     );
 
     assert!(nft.is_err());

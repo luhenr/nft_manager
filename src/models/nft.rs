@@ -4,16 +4,17 @@ use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-#[derive(Debug, Serialize, Deserialize, Validate, Clone, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate, PartialEq)]
 pub struct NFT {
-    #[validate(length(min = 1))]
+    #[validate(length(min = 1, message = "Token ID não pode ser vazio"))]
     pub token_id: String,
 
+    #[validate(range(min = 1, message = "Owner ID deve ser maior que zero"))]
     pub owner_id: u64,
 
     pub creation_date: NaiveDate,
 
-    #[validate(length(min = 1))]
+    #[validate(length(min = 1, message = "Categoria não pode ser vazia"))]
     pub category: String,
 }
 
@@ -32,7 +33,8 @@ impl NFT {
         }
     }
 
-    pub fn validate_nft(&self) -> Result<(), validator::ValidationErrors> {
+    pub fn validate_nft(&self) -> Result<(), String> {
         self.validate()
+            .map_err(|e| format!("Erro de validação: {:?}", e))
     }
 }

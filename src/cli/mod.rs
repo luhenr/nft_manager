@@ -3,9 +3,9 @@
 pub mod commands;
 use commands::{create_nft, delete_nft, read_nft, update_nft};
 use std::env;
-use std::io::{self, BufRead, BufReader};
-use std::io::Write;
+use std::io::{self, BufRead, BufReader, Write};
 
+/// Função principal para executar a interface de linha de comando (CLI).
 pub fn run_cli() {
     // Obtém o caminho do banco de dados da variável de ambiente ou usa o padrão
     let db_path = env::var("DB_PATH").unwrap_or_else(|_| "nfts.db".to_string());
@@ -24,7 +24,11 @@ pub fn run_cli() {
 
         match choice.trim() {
             "1" => create_nft(&mut reader, &db_path),
-            "2" => read_nft(&db_path),
+            "2" => {
+                if let Err(e) = read_nft(&db_path) {
+                    println!("Erro ao listar NFTs: {}", e);
+                }
+            }
             "3" => update_nft(&mut reader, &db_path),
             "4" => delete_nft(&mut reader, &db_path),
             "5" => {
@@ -36,6 +40,7 @@ pub fn run_cli() {
     }
 }
 
+/// Função auxiliar para obter entrada do usuário.
 fn get_input(prompt: &str, reader: &mut impl BufRead) -> String {
     print!("{}", prompt);
     io::stdout().flush().unwrap();

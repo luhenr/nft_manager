@@ -1,5 +1,3 @@
-// src/cli/commands.rs
-
 use crate::models::nft::NFT;
 use crate::storage::file_storage::{FileStorage, StorageError};
 use chrono::NaiveDate;
@@ -14,10 +12,7 @@ pub fn collect_nft_data(
     let nft = NFT::new(token_id, owner_id, creation_date, category);
 
     // Validação dos dados
-    if let Err(e) = nft.validate_nft() {
-        return Err(format!("Erro de validação: {:?}", e));
-    }
-
+    nft.validate_nft()?;
     Ok(nft)
 }
 
@@ -30,21 +25,29 @@ pub fn create_nft(reader: &mut impl BufRead, db_path: &str) {
 
     // Coleta de dados do usuário
     let token_id = get_input("Digite o Token ID (não vazio): ", reader);
+    println!("Token ID recebido: {}", token_id);
     let owner_id = loop {
         let input = get_input("Digite o Owner ID (número inteiro): ", reader);
         match input.parse::<u64>() {
-            Ok(id) => break id,
+            Ok(id) => {
+                println!("Owner ID recebido: {}", id);
+                break id;
+            }
             Err(_) => println!("Owner ID inválido. Por favor, insira um número inteiro."),
         }
     };
     let creation_date = loop {
         let input = get_input("Digite a Data de Criação (AAAA-MM-DD): ", reader);
         match NaiveDate::parse_from_str(&input, "%Y-%m-%d") {
-            Ok(date) => break date,
+            Ok(date) => {
+                println!("Data de Criação recebida: {}", date);
+                break date;
+            }
             Err(_) => println!("Data inválida. Formato esperado: AAAA-MM-DD."),
         }
     };
     let category = get_input("Digite a Categoria do NFT (não vazia): ", reader);
+    println!("Categoria recebida: {}", category);
 
     match collect_nft_data(token_id, owner_id, creation_date, category) {
         Ok(nft) => {
@@ -61,7 +64,7 @@ pub fn create_nft(reader: &mut impl BufRead, db_path: &str) {
     }
 }
 
-pub fn read_nft(db_path: &str) {
+pub fn read_nft(db_path: &str) -> Result<Vec<NFT>, StorageError> {
     println!("\nListando NFTs...");
 
     let mut storage = FileStorage::new(db_path);
@@ -70,7 +73,7 @@ pub fn read_nft(db_path: &str) {
             if nfts.is_empty() {
                 println!("Nenhum NFT encontrado.");
             } else {
-                for nft in nfts {
+                for nft in &nfts {
                     println!("------------------------------");
                     println!("Token ID: {}", nft.token_id);
                     println!("Owner ID: {}", nft.owner_id);
@@ -79,8 +82,12 @@ pub fn read_nft(db_path: &str) {
                 }
                 println!("------------------------------");
             }
+            Ok(nfts)
         }
-        Err(e) => println!("Erro ao carregar NFTs: {}", e),
+        Err(e) => {
+            println!("Erro ao carregar NFTs: {}", e);
+            Err(e)
+        }
     }
 }
 
@@ -111,10 +118,14 @@ pub fn update_nft(reader: &mut impl BufRead, db_path: &str) {
     println!("\nAtualizando um NFT...");
 
     let token_id = get_input("Digite o Token ID do NFT que deseja atualizar: ", reader);
+    println!("Token ID a ser atualizado: {}", token_id);
     let new_owner_id = loop {
         let input = get_input("Digite o novo Owner ID (número inteiro): ", reader);
         match input.parse::<u64>() {
-            Ok(id) => break id,
+            Ok(id) => {
+                println!("Novo Owner ID recebido: {}", id);
+                break id;
+            }
             Err(_) => println!("Owner ID inválido. Por favor, insira um número inteiro."),
         }
     };
@@ -143,6 +154,7 @@ pub fn delete_nft(reader: &mut impl BufRead, db_path: &str) {
     println!("\nDeletando um NFT...");
 
     let token_id = get_input("Digite o Token ID do NFT que deseja deletar: ", reader);
+    println!("Token ID a ser deletado: {}", token_id);
 
     let mut storage = FileStorage::new(db_path);
     match process_delete_nft(&token_id, &mut storage) {

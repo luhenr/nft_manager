@@ -6,6 +6,7 @@ mod storage;
 
 use std::env;
 
+/// Função principal do programa.
 fn main() {
     let args: Vec<String> = env::args().collect();
 
