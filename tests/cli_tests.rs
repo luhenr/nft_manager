@@ -36,6 +36,153 @@ fn test_cli_help() {
         .stdout(contains("Gerenciador de NFTs"));
 }
 
+/* #[test]
+fn test_cli_create_nft_invalid_data() {
+    use assert_cmd::Command;
+    use tempfile::tempdir;
+    use std::str;
+    use predicates::str::contains;
+    use std::time::Duration;
+
+    let mut cmd = Command::cargo_bin("nft_manager").unwrap();
+
+    let dir = tempdir().unwrap();
+    let db_path = dir.path().join("nfts_test.db");
+    let db_path_str = db_path.to_str().unwrap();
+
+    cmd.env("DB_PATH", db_path_str);
+
+    // Input com dados inválidos e válidos
+    let input = "\
+1
+\n  // Token ID vazio (inválido)
+valid_token_id  // Token ID válido
+abc  // Owner ID inválido
+123  // Owner ID válido
+invalid-date  // Data inválida
+2023-10-22  // Data válida
+\n  // Categoria vazia (inválida)
+Arte  // Categoria válida
+5
+";
+
+    // Adicionar uma opção de saída após retornar ao menu
+    let extended_input = format!("{}\n5\n", input);
+
+    cmd
+        .timeout(Duration::from_secs(5))
+        .write_stdin(extended_input)
+        .assert()
+        .success()
+        .stdout(contains("Token ID não pode ser vazio"))
+        .stdout(contains("Owner ID inválido. Por favor, insira um número inteiro"))
+        .stdout(contains("Data inválida. Formato esperado: AAAA-MM-DD"))
+        .stdout(contains("Categoria não pode ser vazia"))
+        .stdout(contains("Saindo..."));
+} */
+
+#[test]
+fn test_cli_update_nft_nonexistent() {
+    use assert_cmd::Command;
+    use tempfile::tempdir;
+    use std::str;
+
+    let mut cmd = Command::cargo_bin("nft_manager").unwrap();
+
+    let dir = tempdir().unwrap();
+    let db_path = dir.path().join("nfts_test.db");
+    let db_path_str = db_path.to_str().unwrap();
+
+    cmd.env("DB_PATH", db_path_str);
+
+    // Tentar atualizar um NFT inexistente
+    let input = "\
+3
+nonexistent_token
+123
+5
+";
+
+    let assert = cmd
+        .write_stdin(input)
+        .assert()
+        .success();
+
+    let output = assert.get_output();
+    let stdout = str::from_utf8(&output.stdout).unwrap();
+
+    // Verificar se a mensagem de erro é exibida
+    assert!(stdout.contains("Erro ao atualizar NFT"));
+    assert!(stdout.contains("NFT com Token ID 'nonexistent_token' não encontrado."));
+}
+
+#[test]
+fn test_cli_delete_nft_nonexistent() {
+    use assert_cmd::Command;
+    use tempfile::tempdir;
+    use std::str;
+
+    let mut cmd = Command::cargo_bin("nft_manager").unwrap();
+
+    let dir = tempdir().unwrap();
+    let db_path = dir.path().join("nfts_test.db");
+    let db_path_str = db_path.to_str().unwrap();
+
+    cmd.env("DB_PATH", db_path_str);
+
+    // Tentar deletar um NFT inexistente
+    let input = "\
+4
+nonexistent_token
+5
+";
+
+    let assert = cmd
+        .write_stdin(input)
+        .assert()
+        .success();
+
+    let output = assert.get_output();
+    let stdout = str::from_utf8(&output.stdout).unwrap();
+
+    // Verificar se a mensagem de erro é exibida
+    assert!(stdout.contains("Erro ao deletar NFT"));
+    assert!(stdout.contains("NFT com Token ID 'nonexistent_token' não encontrado."));
+}
+
+#[test]
+fn test_read_nft_corrupted_db() {
+    use assert_cmd::Command;
+    use tempfile::tempdir;
+    use std::fs::File;
+    use std::io::Write;
+    use predicates::str::contains;
+
+    let mut cmd = Command::cargo_bin("nft_manager").unwrap();
+
+    let dir = tempdir().unwrap();
+    let db_path = dir.path().join("corrupted_nfts.db");
+    let db_path_str = db_path.to_str().unwrap();
+
+    // Criar um arquivo de banco de dados corrompido
+    let mut file = File::create(&db_path).unwrap();
+    writeln!(file, "dados inválidos").unwrap();
+
+    cmd.env("DB_PATH", db_path_str);
+
+    // Tentar listar NFTs
+    let input = "\
+2
+5
+";
+
+    cmd
+        .write_stdin(input)
+        .assert()
+        .success()
+        .stdout(contains("Erro ao carregar NFTs"));
+}
+
 #[test]
 fn test_cli_create_nft() {
     let mut cmd = Command::cargo_bin("nft_manager").unwrap();

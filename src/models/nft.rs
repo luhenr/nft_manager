@@ -9,7 +9,6 @@ pub struct NFT {
     #[validate(length(min = 1, message = "Token ID não pode ser vazio"))]
     pub token_id: String,
 
-    #[validate(range(min = 1, message = "Owner ID deve ser maior que zero"))]
     pub owner_id: u64,
 
     pub creation_date: NaiveDate,
@@ -17,6 +16,7 @@ pub struct NFT {
     #[validate(length(min = 1, message = "Categoria não pode ser vazia"))]
     pub category: String,
 }
+
 
 impl NFT {
     pub fn new(

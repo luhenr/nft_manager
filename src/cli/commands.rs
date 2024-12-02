@@ -25,6 +25,11 @@ pub fn create_nft(reader: &mut impl BufRead, db_path: &str) {
 
     // Coleta de dados do usuário
     let token_id = get_input("Digite o Token ID (não vazio): ", reader);
+
+    if token_id.is_empty() {
+        println!("Token ID não pode ser vazio.");
+        return;
+    }
     println!("Token ID recebido: {}", token_id);
     let owner_id = loop {
         let input = get_input("Digite o Owner ID (número inteiro): ", reader);
