@@ -1,7 +1,5 @@
-// src/storage/file_storage.rs
-
 use crate::models::nft::NFT;
-use serde_json::{from_reader, to_writer};
+use serde_cbor::{from_reader, to_writer};
 use std::fmt;
 use std::fs::OpenOptions;
 use std::io::{BufReader, BufWriter};
@@ -9,14 +7,14 @@ use std::io::{BufReader, BufWriter};
 #[derive(Debug)]
 pub enum StorageError {
     Io(std::io::Error),
-    Serde(serde_json::Error),
+    Serde(serde_cbor::Error),
 }
 
 impl fmt::Display for StorageError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             StorageError::Io(e) => write!(f, "Erro de IO: {}", e),
-            StorageError::Serde(e) => write!(f, "Erro de Serde: {}", e),
+            StorageError::Serde(e) => write!(f, "Erro de Serialização: {}", e),
         }
     }
 }
@@ -71,7 +69,7 @@ impl FileStorage {
             .truncate(true)
             .open(&self.file_path)
             .map_err(StorageError::Io)?;
-        
+
         let writer = BufWriter::new(file);
         to_writer(writer, &nfts).map_err(StorageError::Serde)?;
         Ok(())
