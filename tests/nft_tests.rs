@@ -1,9 +1,8 @@
-// tests/nft_tests.rs
-
 use chrono::NaiveDate;
 use nft_manager::cli::commands::{
     collect_nft_data, process_create_nft, process_delete_nft, process_update_nft,
 };
+use nft_manager::models::category::Category;
 use nft_manager::models::nft::NFT;
 use nft_manager::storage::file_storage::FileStorage;
 use tempfile::tempdir;
@@ -14,7 +13,7 @@ fn test_nft_creation() {
         "token123".to_string(),
         456u64,
         NaiveDate::from_ymd_opt(2023, 10, 21).expect("Data inválida"),
-        "Arte".to_string(),
+        Category::Other("Arte".to_string()), // Ajustado para usar Category
     );
 
     assert_eq!(nft.token_id, "token123");
@@ -23,7 +22,7 @@ fn test_nft_creation() {
         nft.creation_date,
         NaiveDate::from_ymd_opt(2023, 10, 21).expect("Data inválida")
     );
-    assert_eq!(nft.category, "Arte");
+    assert_eq!(nft.category, Category::Other("Arte".to_string())); // Ajustado para usar Category
 }
 
 #[test]
@@ -32,10 +31,10 @@ fn test_nft_validation() {
         "".to_string(), // token_id vazio
         0,              // owner_id inválido (zero não é permitido)
         NaiveDate::from_ymd_opt(2023, 10, 21).expect("Data inválida"),
-        "".to_string(), // categoria vazia
+        Category::Other("".to_string()), // Ajustado para usar Category
     );
 
-    assert!(nft.validate_nft().is_err());
+    assert!(nft.validate().is_err()); // Ajustado para usar validate
 }
 
 #[test]
@@ -44,7 +43,7 @@ fn test_collect_nft_data_valid() {
         "token_test".to_string(),
         123u64,
         NaiveDate::from_ymd_opt(2023, 11, 5).expect("Data inválida"),
-        "Arte".to_string(),
+        Category::Other("Arte".to_string()), // Ajustado para usar Category
     );
 
     assert!(nft.is_ok());
@@ -56,7 +55,7 @@ fn test_collect_nft_data_invalid() {
         "".to_string(), // token_id vazio
         0u64,           // owner_id inválido
         NaiveDate::from_ymd_opt(2023, 11, 5).expect("Data inválida"),
-        "".to_string(), // categoria vazia
+        Category::Other("".to_string()), // Ajustado para usar Category
     );
 
     assert!(nft.is_err());
@@ -68,7 +67,7 @@ fn test_process_create_nft() {
         "token_process_test".to_string(),
         789u64,
         NaiveDate::from_ymd_opt(2023, 11, 5).expect("Data inválida"),
-        "Colecionável".to_string(),
+        Category::Other("Colecionável".to_string()), // Ajustado para usar Category
     );
 
     let dir = tempdir().unwrap();
@@ -91,7 +90,7 @@ fn test_process_update_nft() {
         "token_update_test".to_string(),
         123u64,
         NaiveDate::from_ymd_opt(2023, 11, 5).expect("Data inválida"),
-        "Arte".to_string(),
+        Category::Other("Arte".to_string()), // Ajustado para usar Category
     );
 
     let dir = tempdir().unwrap();
@@ -114,7 +113,7 @@ fn test_process_delete_nft() {
         "token_delete_test".to_string(),
         123u64,
         NaiveDate::from_ymd_opt(2023, 11, 5).expect("Data inválida"),
-        "Arte".to_string(),
+        Category::Other("Arte".to_string()), // Ajustado para usar Category
     );
 
     let dir = tempdir().unwrap();
